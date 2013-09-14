@@ -1,0 +1,38 @@
+function [y_model weights neighbors comp] = dp_lwr(D_train, x_test, lambda, id)
+
+    % separate the predictors from the response
+    X_train = D_train(:,1:end-1);
+    y_train = D_train(:,end);
+    
+    % calculate weights
+    n       = size(X_train,1);
+    W       = zeros(n,n);
+    weights = zeros(n,1);
+    dist    = zeros(n,1);
+    iter    = 0;
+        for k=1:n,
+            d          = dp_euclidean_distance(D_train(k,:),x_test,0);
+            weights(k) = exp(-d^2 / (2 * lambda^2));
+            W(k,k)     = weights(k);
+            dist(k)    = d;
+        end
+        neighbors = sum(weights>=0.001);
+        iter      = iter+1;
+        thresh    = thresh*1.1;
+    end
+    if (iter>1),
+        msg = 'Regression complete after %d iterations (threshold = %d) for %d';
+        msg = sprintf(msg, iter, thresh, id);
+        disp(msg);
+    end
+    comp = find(weights==max(weights));
+
+    % set up our data
+    % note: try leaving out the lat,lon here
+    M      = [ones(n,1) X_train(:,3:end)];
+    y      = y_train;
+    m_test = [1 x_test(:,3:end)];
+
+    % now do locally weighted regression
+    theta   = pinv(M'*W*M) * M' * W * y;
+    y_model = m_test * theta;

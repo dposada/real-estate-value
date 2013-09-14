@@ -1,0 +1,30 @@
+function [mix X prob groups] = dp_gmm_houses(data_file, num_id_cols, num_centers, num_iters)
+
+    % load the data
+    D_raw = load(data_file);
+    X_raw = D_raw(:,1:end-1);
+    
+    % scale the data
+    X_norm = dp_normalize(X_raw,num_id_cols);
+    X      = X_norm(:,num_id_cols+1:end);
+
+    %%%
+    if nargin < 4
+        num_iters = 100;
+        if nargin < 3
+            num_centers = 5;
+        end
+    end
+    [mix options errlog prob] = dp_gmm(X, 0, num_centers, num_iters);
+    
+    %%%
+    scatter(X_raw(:,num_id_cols+2),X_raw(:,num_id_cols+1),8,prob);
+    
+    %%%
+    maxes       = max(prob,[],2);
+    maxes       = [maxes maxes maxes];
+    probs       = round(prob);
+    [rows cols] = find(probs==1);
+    ind         = [rows cols];
+    ind         = sortrows(ind);
+    groups      = [X_raw(:,num_id_cols+2) X_raw(:,num_id_cols+1) ind(:,2)];

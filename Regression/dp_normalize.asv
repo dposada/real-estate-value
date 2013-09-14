@@ -1,0 +1,14 @@
+function data = dp_normalize(original, num_id_cols)
+
+    %%%
+    rows = size(original,1);
+    orig = original(:,num_id_cols+1:end);
+    orig = orig - ones(rows,1)*min(orig);
+    orig = 
+    
+    % normalize to a standard gaussian
+    muo   = mean( original( :, num_id_cols+1:end) );
+    stdo  = std( original( :, num_id_cols+1:end) );
+    stdo2 = 1 ./ stdo;
+    data  = [original(:,1:num_id_cols) (original(:,num_id_cols+1:end) - ones(rows,1)*muo)*diag(stdo2)];
+    

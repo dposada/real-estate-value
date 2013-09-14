@@ -1,0 +1,1 @@
+mlsnum,lat,lon,lot,sqft,land,landft,impr,imft,appr,defects,defectsrprt,foundation,repaired,treated,year,protested,a4,a9inside,a9outside,a16,a17,a20,a21,a22,distdt,frcl,quicksale,needsrepair,salesprice

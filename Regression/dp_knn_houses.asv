@@ -1,0 +1,102 @@
+function [Y_test Y_model confusion] = dp_knn_houses(data_file, num_id_cols, k, verbose)
+
+    if nargin<4
+        verbose = false;
+    end
+
+    %%%
+    output_names = {'<200000','<120000','<10000000','<300000','<485000'};
+
+    % load the data
+    D = load(data_file);
+
+    % scale the data
+    D = [D(:,1:num_id_cols) dp_normalize(D(:,num_id_cols+1:end-1)) D(:,end)];
+
+    % determine how much is training data
+    train_percent = 0.90;
+    rows          = size(D, 1);
+    train_size    = ceil(rows*train_percent);
+
+    % set up our training matrix
+    T = D(1:train_size,:);
+    
+    % set up our test matrix
+    S         = D(train_size+1:end,:);
+    test_size = size(S,1);
+    
+    % roll our own kNN here
+    num_tests = size(S,1);
+    Y_pred    = zeros(num_tests,1);
+    confusion = zeros(size(output_names,2), size(output_names,2));
+    for j=1:num_tests
+        [neighbors dists] = dp_find_knn(T, S(j,:), k, num_id_cols);
+        weights           = 1 ./ dists;
+        prediction        = sum(weights.*neighbors(:,end))/sum(weights);
+        if isnan(prediction)
+            
+            disp(sprintf('yikes! same house with two distinct mls listings: %d',S(j,1)));
+            disp('neighbors:');
+            disp(neighbors(:,1));
+            prediction = S(j,end);
+        end
+        Y_pred(j)         = prediction;
+        actual            = S(j,end);
+        if verbose && prediction ~= actual
+            msg  = '%d predicted as %s (%d) but is actually %s (%d)';
+            pred = output_names{prediction};
+            act  = output_names{actual};
+            msg  = sprintf(msg, S(j,1), pred, prediction, act, actual);
+            disp(msg);
+            msg = 'neighbors:';
+            disp(msg);
+            disp([neighbors(:,1) neighbors(:,end)]);
+            msg = sprintf('%d', S(j,1));
+            for i=1:k
+                msg = sprintf('%s,%d', msg, neighbors(i,1));
+            end
+            msg = sprintf('%s\n', msg);
+            disp(msg);
+        end
+%        confusion(actual,prediction) = confusion(actual,prediction)+1;
+    end
+    
+    % see how we did
+    Y_test  = S(:,end);
+    Y_model = Y_pred;
+    E_1     = Y_test-Y_model;
+    E_2     = E_1./Y_test;
+    E_3     = abs(E_2);
+    E       = [E_1 E_2 E_3];
+    R       = [S(:,1:num_id_cols) Y_test Y_model E];
+    save('results.txt', 'R', '-ASCII', '-DOUBLE', '-tabs');
+    e_mean   = mean(E_3)*100;
+    e_median = median(E_3)*100;
+    e_max    = max(E_3)*100;
+    e_20     = sum(E_3<0.2)/test_size*100;
+    e_10     = sum(E_3<0.1)/test_size*100;
+    e_5      = sum(E_3<0.05)/test_size*100;
+    msg      = strcat(...
+        'Mean:   %5.2f\n', ...
+        'Median: %5.2f\n', ...
+        'Max:    %5.2f\n', ...
+        '< 20:   %5.2f\n', ...
+        '< 10:   %5.2f\n', ...
+        '< 5:    %5.2f\n');
+    msg = sprintf(msg, e_mean, e_median, e_max, e_20, e_10, e_5);
+    disp(msg);
+
+    
+    
+    %{
+    accuracy = sum(Y_test==Y_model)/num_tests;
+    msg      = 'k: %d, Accuracy: %f';
+    msg      = sprintf(msg, k, accuracy);
+    disp(msg);
+    if verbose
+        msg = 'Confusion matrix:';
+        disp(msg);
+        disp(confusion);
+    end
+    %}
+    
